@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#17351f" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="90台ゴルフ" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="apple-touch-icon" href="./icon-180.png" />
+<title>90台ラウンドトラッカー</title>
+<style>
+:root{--bg:#f5f6f2;--card:#fff;--text:#182018;--muted:#687268;--line:#dfe4dc;--accent:#1f6b36;--accent2:#e8f2eb;--warn:#9b5c00;--danger:#a22;--shadow:0 6px 24px rgba(0,0,0,.06)}
+*{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit} button{cursor:pointer}
+.app{max-width:720px;margin:0 auto;padding:12px 12px 96px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.header h1{font-size:20px;margin:0}.sub{font-size:12px;color:var(--muted)}
+.pills{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}.pill{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center}.pill .v{font-size:22px;font-weight:800}.pill .k{font-size:11px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:10px;box-shadow:var(--shadow)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+label{display:block;font-size:12px;color:var(--muted)} select,input,textarea{width:100%;margin-top:5px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px;min-height:46px;font-size:16px} textarea{min-height:76px;resize:vertical}
+.section-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.section-title h2{font-size:16px;margin:0}
+.btn{border:0;border-radius:12px;padding:12px 14px;min-height:46px;font-weight:700}.primary{background:var(--accent);color:#fff}.secondary{background:var(--accent2);color:#174c29}.ghost{background:#fff;border:1px solid var(--line);color:var(--text)}.danger{background:#fff;border:1px solid #efcaca;color:var(--danger)}
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.quick{border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 6px;min-height:50px;font-size:13px}.quick.active{border-color:var(--accent);background:var(--accent2);color:#174c29;font-weight:700}
+.shots{display:flex;flex-direction:column;gap:8px}.shot{border:1px solid var(--line);border-radius:12px;padding:10px}.shot-top{display:flex;justify-content:space-between;gap:8px}.shot strong{font-size:14px}.shot-meta{font-size:12px;color:var(--muted);margin-top:4px}.bad{color:var(--danger);font-weight:700}
+.holes{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}.hole{border:1px solid var(--line);border-radius:10px;padding:8px 2px;background:#fff;text-align:center;min-height:50px}.hole.current{outline:2px solid var(--accent)}.hole .n{font-size:11px;color:var(--muted)}.hole .s{font-weight:800}.hole.done{background:#f8fbf8}.hole.triple{background:#fff1f1}.hole.double{background:#fff8e7}
+.analysis{font-size:14px;line-height:1.6}.analysis strong{font-size:15px}.tag{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--accent2);margin:2px 4px 2px 0;font-size:12px}
+.bottom{position:fixed;left:0;right:0;bottom:0;background:rgba(245,246,242,.96);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:8px max(12px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));z-index:5}.bottom-inner{max-width:720px;margin:0 auto;display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.notice{font-size:12px;color:var(--muted);margin-top:8px}.hidden{display:none!important}
+@media(max-width:390px){.pills{grid-template-columns:repeat(2,1fr)}.quick-grid{grid-template-columns:repeat(3,1fr)}.holes{grid-template-columns:repeat(6,1fr)}.row3{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="header">
+    <div><h1>90台ラウンドトラッカー</h1><div class="sub">1打ずつ記録して、事故の場所を可視化</div></div>
+    <button class="btn ghost" id="newRound">新規</button>
+  </div>
+
+  <div class="pills">
+    <div class="pill"><div class="v" id="totalScore">0</div><div class="k">TOTAL</div></div>
+    <div class="pill"><div class="v" id="playedHoles">0</div><div class="k">HOLES</div></div>
+    <div class="pill"><div class="v" id="badShots">0</div><div class="k">事故ショット</div></div>
+    <div class="pill"><div class="v" id="penaltyCount">0</div><div class="k">OB・池</div></div>
+  </div>
+
+  <section class="card">
+    <div class="section-title"><h2>ホール</h2><div class="sub" id="shotCountLabel">1H / 1打目</div></div>
+    <div class="row3">
+      <label>Hole<select id="holeSelect"></select></label>
+      <label>Par<select id="par"><option>3</option><option selected>4</option><option>5</option></select></label>
+      <label>Score<input id="holeScore" inputmode="numeric" type="number" min="1" max="15" placeholder="例 6"></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-title"><h2>ショット記録</h2><button class="btn ghost" id="undoShot">1打戻す</button></div>
+    <div class="quick-grid" id="clubGrid"></div>
+    <div class="quick-grid" id="resultGrid" style="margin-top:8px"></div>
+    <div class="row" style="margin-top:10px">
+      <label>残り距離<input id="distance" inputmode="numeric" type="number" min="0" max="700" placeholder="yd"></label>
+      <label>ライ<select id="lie"><option>ティー</option><option>FW</option><option>ラフ</option><option>バンカー</option><option>カラー</option><option>グリーン</option><option>その他</option></select></label>
+    </div>
+    <label style="margin-top:10px">メモ<input id="shotMemo" placeholder="例：力んでチョロ / 安全に6UT"></label>
+    <div class="notice">クラブと結果を選ぶだけでも保存できます。距離・ライ・メモは任意。</div>
+  </section>
+
+  <section class="card">
+    <div class="section-title"><h2>このホールの履歴</h2><div class="sub" id="holeSummaryMini"></div></div>
+    <div class="shots" id="shotList"></div>
+  </section>
+
+  <section class="card">
+    <div class="section-title"><h2>ホール総括</h2></div>
+    <div class="quick-grid" id="ratingGrid">
+      <button class="quick active" data-rating="○">○ ボギー圏</button>
+      <button class="quick" data-rating="◎">◎ 狙い通り</button>
+      <button class="quick" data-rating="△">△ 事故あり</button>
+      <button class="quick" data-rating="×">× 大事故</button>
+    </div>
+    <label style="margin-top:10px">総括<textarea id="holeMemo" placeholder="例：ティーショットOK。2打目4UTチョロで1打損。次は6UTで刻む"></textarea></label>
+    <button class="btn secondary" id="saveHole" style="width:100%;margin-top:10px">ホール総括を保存</button>
+  </section>
+
+  <section class="card">
+    <div class="section-title"><h2>18ホール</h2><button class="btn ghost" id="exportText">結果コピー用表示</button></div>
+    <div class="holes" id="holeGrid"></div>
+  </section>
+
+  <section class="card">
+    <div class="section-title"><h2>ラウンド分析</h2></div>
+    <div class="analysis" id="analysis"></div>
+    <div id="exportArea" class="hidden" style="margin-top:10px"><textarea id="exportTextArea" readonly></textarea></div>
+  </section>
+</div>
+
+<div class="bottom"><div class="bottom-inner"><button class="btn ghost" id="nextHole">次ホール</button><button class="btn primary" id="addShot">この1打を記録</button></div></div>
+
+<script>
+(() => {
+  const KEY='golf90_round_tracker_v1';
+  const clubs=['1W','5W','4UT','6UT','7I','8I','9I','PW','52°','58°','チッパー','パター'];
+  const results=['○ 想定内','右','左','ショート','オーバー','チョロ','シャンク','トップ','ダフリ','OB/池','バンカー'];
+  const badSet=new Set(['右','左','ショート','オーバー','チョロ','シャンク','トップ','ダフリ','OB/池','バンカー']);
+  const state = load() || {currentHole:1, holes:Array.from({length:18},(_,i)=>({hole:i+1,par:4,score:null,shots:[],rating:'○',memo:''}))};
+  let selectedClub='1W', selectedResult='○ 想定内', selectedRating='○';
+
+  const $=s=>document.querySelector(s);
+  const holeSelect=$('#holeSelect'), par=$('#par'), holeScore=$('#holeScore'), distance=$('#distance'), lie=$('#lie'), shotMemo=$('#shotMemo'), holeMemo=$('#holeMemo');
+
+  for(let i=1;i<=18;i++){const o=document.createElement('option');o.value=i;o.textContent=i+'H';holeSelect.appendChild(o)}
+  const clubGrid=$('#clubGrid'); clubs.forEach((c,i)=>{const b=document.createElement('button');b.className='quick'+(i===0?' active':'');b.textContent=c;b.dataset.club=c;b.type='button';clubGrid.appendChild(b)});
+  const resultGrid=$('#resultGrid'); results.forEach((r,i)=>{const b=document.createElement('button');b.className='quick'+(i===0?' active':'');b.textContent=r;b.dataset.result=r;b.type='button';resultGrid.appendChild(b)});
+
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+  function load(){try{const x=localStorage.getItem(KEY);return x?JSON.parse(x):null}catch(e){return null}}
+  function h(){return state.holes[state.currentHole-1]}
+  function esc(v){return String(v).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]))}
+  function selectBtn(grid,attr,val){grid.querySelectorAll('.quick').forEach(b=>b.classList.toggle('active',b.dataset[attr]===val))}
+
+  function loadHole(){const x=h();holeSelect.value=state.currentHole;par.value=x.par;holeScore.value=x.score??'';holeMemo.value=x.memo;selectedRating=x.rating||'○';selectBtn($('#ratingGrid'),'rating',selectedRating);render()}
+
+  function addShot(){const x=h();const d=distance.value===''?null:Math.max(0,Math.min(700,Number(distance.value)||0));x.shots.push({club:selectedClub,result:selectedResult,distance:d,lie:lie.value,memo:shotMemo.value.trim()});distance.value='';shotMemo.value='';selectedResult='○ 想定内';selectBtn(resultGrid,'result',selectedResult);if(x.shots.length===1 && selectedClub==='1W') lie.value='FW';save();render()}
+
+  function renderShots(){const list=$('#shotList');list.innerHTML='';const x=h();if(!x.shots.length){list.innerHTML='<div class="sub">まだ記録なし</div>';return}x.shots.forEach((s,i)=>{const d=document.createElement('div');d.className='shot';const bad=badSet.has(s.result);d.innerHTML=`<div class="shot-top"><strong>${i+1}打目 ${esc(s.club)}</strong><span class="${bad?'bad':''}">${esc(s.result)}</span></div><div class="shot-meta">${s.distance!==null?'残り'+s.distance+'yd ・ ':''}${esc(s.lie)}${s.memo?' ・ '+esc(s.memo):''}</div>`;list.appendChild(d)})}
+
+  function renderGrid(){const grid=$('#holeGrid');grid.innerHTML='';state.holes.forEach(x=>{const b=document.createElement('button');b.type='button';b.className='hole'+(x.hole===state.currentHole?' current':'')+(x.score!==null?' done':'');if(x.score!==null){const diff=x.score-x.par;if(diff>=3)b.className+=' triple';else if(diff===2)b.className+=' double'}b.innerHTML=`<div class="n">${x.hole}H</div><div class="s">${x.score??'—'}</div>`;b.addEventListener('click',()=>{state.currentHole=x.hole;loadHole()});grid.appendChild(b)})}
+
+  function renderAnalysis(){const played=state.holes.filter(x=>x.score!==null);const shots=state.holes.flatMap(x=>x.shots);const bad=shots.filter(s=>badSet.has(s.result));const penalties=shots.filter(s=>s.result==='OB/池').length;$('#totalScore').textContent=played.reduce((a,x)=>a+x.score,0)||0;$('#playedHoles').textContent=played.length;$('#badShots').textContent=bad.length;$('#penaltyCount').textContent=penalties;$('#shotCountLabel').textContent=`${state.currentHole}H / ${h().shots.length+1}打目`;$('#holeSummaryMini').textContent=`${h().shots.length}打記録`;
+    const missCount={};bad.forEach(s=>missCount[s.result]=(missCount[s.result]||0)+1);const clubBad={};bad.forEach(s=>clubBad[s.club]=(clubBad[s.club]||0)+1);const missRank=Object.entries(missCount).sort((a,b)=>b[1]-a[1]);const clubRank=Object.entries(clubBad).sort((a,b)=>b[1]-a[1]);const byShot={};state.holes.forEach(x=>x.shots.forEach((s,i)=>{if(badSet.has(s.result))byShot[i+1]=(byShot[i+1]||0)+1}));const posRank=Object.entries(byShot).sort((a,b)=>b[1]-a[1]);const triples=played.filter(x=>x.score-x.par>=3).length;
+    let html=`<div><strong>90台チェック</strong></div><div>${penalties<=2?'✓':'△'} OB・池：${penalties}回 / 目安2回以内</div><div>${triples<=3?'✓':'△'} トリ以上：${triples}H / 目安3H以内</div>`;
+    if(missRank.length)html+=`<div style="margin-top:8px">最多ミス：<strong>${esc(missRank[0][0])} ${missRank[0][1]}回</strong></div>`;
+    if(clubRank.length)html+=`<div>事故最多クラブ：<strong>${esc(clubRank[0][0])} ${clubRank[0][1]}回</strong></div>`;
+    if(posRank.length)html+=`<div>事故が多い位置：<strong>${posRank[0][0]}打目 ${posRank[0][1]}回</strong></div>`;
+    if(shots.length)html+=`<div style="margin-top:8px"><span class="tag">記録 ${shots.length}打</span><span class="tag">事故 ${bad.length}打</span></div>`;
+    $('#analysis').innerHTML=html;
+  }
+
+  function render(){renderShots();renderGrid();renderAnalysis()}
+
+  clubGrid.addEventListener('click',e=>{const b=e.target.closest('[data-club]');if(!b)return;selectedClub=b.dataset.club;selectBtn(clubGrid,'club',selectedClub)});
+  resultGrid.addEventListener('click',e=>{const b=e.target.closest('[data-result]');if(!b)return;selectedResult=b.dataset.result;selectBtn(resultGrid,'result',selectedResult)});
+  $('#ratingGrid').addEventListener('click',e=>{const b=e.target.closest('[data-rating]');if(!b)return;selectedRating=b.dataset.rating;selectBtn($('#ratingGrid'),'rating',selectedRating)});
+  $('#addShot').addEventListener('click',addShot);
+  $('#undoShot').addEventListener('click',()=>{if(h().shots.length){h().shots.pop();save();render()}});
+  $('#saveHole').addEventListener('click',()=>{const x=h();x.par=Math.max(3,Math.min(5,Number(par.value)||4));x.score=holeScore.value===''?null:Math.max(1,Math.min(15,Number(holeScore.value)||x.par));x.rating=selectedRating;x.memo=holeMemo.value.trim();save();render()});
+  holeSelect.addEventListener('change',()=>{state.currentHole=Number(holeSelect.value);loadHole()});
+  $('#nextHole').addEventListener('click',()=>{if(state.currentHole<18){state.currentHole++;loadHole()}});
+  $('#newRound').addEventListener('click',()=>{if(confirm('現在の記録を消して新しいラウンドを開始しますか？')){state.currentHole=1;state.holes=Array.from({length:18},(_,i)=>({hole:i+1,par:4,score:null,shots:[],rating:'○',memo:''}));save();loadHole()}});
+  $('#exportText').addEventListener('click',()=>{const lines=[];state.holes.forEach(x=>{if(x.score===null&&x.shots.length===0)return;lines.push(`${x.hole}H Par${x.par} Score ${x.score??'-'} ${x.rating}`);x.shots.forEach((s,i)=>lines.push(`  ${i+1}打目 ${s.club} / ${s.result}${s.distance!==null?' / 残り'+s.distance+'yd':''} / ${s.lie}${s.memo?' / '+s.memo:''}`));if(x.memo)lines.push(`  総括: ${x.memo}`)});const ta=$('#exportTextArea');ta.value=lines.join('\n');$('#exportArea').classList.remove('hidden');ta.focus();ta.select()});
+
+  loadHole();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
