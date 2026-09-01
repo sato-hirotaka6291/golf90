@@ -161,5 +161,89 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+
+<div id="exportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;padding:20px;overflow:auto">
+  <div style="max-width:680px;margin:30px auto;background:var(--card,#fff);color:var(--text,#111);border-radius:18px;padding:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <strong style="font-size:20px">ChatGPT分析用データ</strong>
+      <button id="closeExport" type="button" style="min-height:44px;padding:8px 14px">閉じる</button>
+    </div>
+    <p style="font-size:14px;opacity:.75">下の全文を選択してコピーし、ChatGPTに貼り付けてください。</p>
+    <textarea id="exportText" readonly style="width:100%;min-height:360px;font-size:16px;padding:12px;border-radius:12px"></textarea>
+    <button id="selectExport" type="button" style="width:100%;min-height:48px;margin-top:10px">全文を選択</button>
+  </div>
+</div>
+
+
+<script>
+(function(){
+  function getRoundData(){
+    try {
+      // The app stores its round in localStorage. Find the most likely JSON record
+      // without changing the existing storage format.
+      const candidates=[];
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i);
+        try{
+          const v=JSON.parse(localStorage.getItem(k));
+          if(v && typeof v==='object') candidates.push([k,v]);
+        }catch(e){}
+      }
+      const scored=candidates.sort((a,b)=>{
+        const score=o=>{
+          const txt=JSON.stringify(o);
+          return (txt.includes('shots')?5:0)+(txt.includes('holes')?5:0)+(txt.includes('club')?2:0);
+        };
+        return score(b[1])-score(a[1]);
+      });
+      return scored.length?scored[0][1]:null;
+    } catch(e){ return null; }
+  }
+  function buildChatGPTExport(){
+    const data=getRoundData();
+    const lines=[
+      '【90台ゴルフ・ラウンド分析依頼】',
+      '以下はラウンド中に記録したショットデータです。',
+      '①失った打数が大きい原因 ②事故が多いクラブ/打順/距離帯 ③良かった点 ④次回の改善優先順位3つ ⑤90台に入るため削れそうな打数 を分析してください。',
+      ''
+    ];
+    if(!data){
+      lines.push('記録データを取得できませんでした。アプリ内のホール記録を確認してください。');
+      return lines.join('\n');
+    }
+    const holes = Array.isArray(data.holes) ? data.holes : (Array.isArray(data) ? data : []);
+    if(!holes.length){
+      lines.push(JSON.stringify(data,null,2));
+      return lines.join('\n');
+    }
+    holes.forEach((h,idx)=>{
+      const shots=Array.isArray(h.shots)?h.shots:[];
+      if(h.score==null && !shots.length) return;
+      lines.push(`${h.hole||idx+1}H / Par ${h.par||'-'} / Score ${h.score??'-'}`);
+      shots.forEach((sh,i)=>{
+        const parts=[`${i+1}打目`,sh.club||'-'];
+        if(sh.distance!==null && sh.distance!==undefined && sh.distance!=='') parts.push(`残り${sh.distance}yd`);
+        if(sh.lie) parts.push(`ライ:${sh.lie}`);
+        if(sh.result) parts.push(`結果:${sh.result}`);
+        if(sh.miss && sh.miss!=='none') parts.push(`ミス:${sh.miss}`);
+        if(sh.memo) parts.push(`メモ:${sh.memo}`);
+        lines.push('  '+parts.join(' / '));
+      });
+      if(h.memo) lines.push('  総括: '+h.memo);
+      lines.push('');
+    });
+    return lines.join('\n');
+  }
+  const btn=document.getElementById('exportChatGPT');
+  const modal=document.getElementById('exportModal');
+  const area=document.getElementById('exportText');
+  if(btn && modal && area){
+    btn.addEventListener('click',()=>{area.value=buildChatGPTExport();modal.style.display='block';});
+    document.getElementById('closeExport').addEventListener('click',()=>{modal.style.display='none';});
+    document.getElementById('selectExport').addEventListener('click',()=>{area.focus();area.select();});
+  }
+})();
+</script>
+
 </body>
 </html>
